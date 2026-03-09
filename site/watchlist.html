@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperSniper — Watchlist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="watchlist">
+  <div class="shell">
+    <main class="main mobile-page">
+      <section class="hero hero-premium compact-hero">
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow-pill">Watchlist</div>
+            <h1>Keep your best targets in one place and monitor urgency fast.</h1>
+            <p>Track saved listings and revisit them anytime.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card summary-row">
+        <div>Saved Listings <strong id="watch-count">0</strong></div>
+      </section>
+
+      <section class="feed-section">
+        <div class="section-head">
+          <h2>Active Watchlist</h2>
+        </div>
+        <div id="watch-list" class="listing-grid"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <a href="index.html">Dashboard</a>
+      <a href="hunter.html">Hunter</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="watchlist.html" class="active">Watchlist</a>
+      <a href="homepage.html">Site</a>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

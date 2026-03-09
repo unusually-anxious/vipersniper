@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperSniper Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="dashboard">
+  <div class="shell">
+    <main class="main mobile-page">
+      <div class="mobile-top">
+        <div class="mobile-brand">
+          <div class="brand-mark"></div>
+          <strong>ViperSniper</strong>
+        </div>
+        <div class="chip glow">Pro</div>
+      </div>
+
+      <section class="hero hero-premium">
+        <div class="hero-grid">
+          <div>
+            <h1>Luxury auction intelligence, built for finding real deals fast.</h1>
+            <p>Search multiple auction sources at once, surface zero-bid opportunities, rank listings by sniper score, and move from discovery to action inside one premium operator console.</p>
+            <div class="hero-actions">
+              <a href="hunter.html" class="btn btn-primary">Open Zero-Bid Hunter</a>
+              <a href="watchlist.html" class="btn btn-secondary">View Watchlist</a>
+            </div>
+
+            <div class="pulse-card glass-card">
+              <div class="pulse-stats">
+                <strong id="pulse-count">0</strong>
+                <span>live tracked items</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="stat-card glass-card"><span>Total Listings</span><strong id="stat-total">0</strong><small>All tracked opportunities</small></div>
+        <div class="stat-card glass-card"><span>Zero Bid</span><strong id="stat-zero">0</strong><small>Immediate bargain candidates</small></div>
+        <div class="stat-card glass-card"><span>High Score 70+</span><strong id="stat-high">0</strong><small>Premium ranked opportunities</small></div>
+        <div class="stat-card glass-card"><span>Ending Soon</span><strong id="stat-soon">0</strong><small>Closing inside 30 minutes</small></div>
+      </section>
+
+      <section class="feed-section">
+        <div class="section-head">
+          <h2>Live Auction Feed</h2>
+        </div>
+        <div id="live-feed" class="listing-grid"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <a href="index.html" class="active">Dashboard</a>
+      <a href="hunter.html">Hunter</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="watchlist.html">Watchlist</a>
+      <a href="homepage.html">Site</a>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

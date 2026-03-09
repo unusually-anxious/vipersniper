@@ -1,0 +1,489 @@
+const API_BASE = "http://127.0.0.1:8000";
+const WATCHLIST_KEY = "vipersniper_watchlist";
+const ALERTS_KEY = "vipersniper_alerts";
+
+const state = {
+  listings: [],
+  filteredListings: [],
+  watchlist: JSON.parse(localStorage.getItem(WATCHLIST_KEY) || "[]"),
+  alerts: JSON.parse(localStorage.getItem(ALERTS_KEY) || "[]"),
+  filters: {
+    search: "",
+    bidType: "all",
+    score: "all",
+    source: "all",
+    sort: "highest"
+  }
+};
+
+function saveWatchlist() {
+  localStorage.setItem(WATCHLIST_KEY, JSON.stringify(state.watchlist));
+}
+
+function saveAlerts() {
+  localStorage.setItem(ALERTS_KEY, JSON.stringify(state.alerts));
+}
+
+function normalizeText(value) {
+  return String(value || "").toLowerCase().trim();
+}
+
+function isZeroBid(item) {
+  return Number(item.bid || 0) === 0;
+}
+
+function isEndingSoon(item) {
+  if (!item.end_time) return false;
+  const now = new Date();
+  const end = new Date(item.end_time);
+  const diff = end.getTime() - now.getTime();
+  return diff > 0 && diff <= 30 * 60 * 1000;
+}
+
+function matchesSearch(item, search) {
+  if (!search) return true;
+
+  const haystack = [
+    item.title,
+    item.vin,
+    item.make,
+    item.model,
+    item.location,
+    item.source_name,
+    item.damage,
+    item.title_status
+  ].map(normalizeText).join(" ");
+
+  return haystack.includes(normalizeText(search));
+}
+
+function matchesFilters(item) {
+  const f = state.filters;
+
+  if (!matchesSearch(item, f.search)) return false;
+  if (f.bidType === "zero" && !isZeroBid(item)) return false;
+  if (f.bidType === "nonzero" && isZeroBid(item)) return false;
+  if (f.bidType === "ending" && !isEndingSoon(item)) return false;
+  if (f.score === "70plus" && Number(item.score || 0) < 70) return false;
+  if (f.score === "50plus" && Number(item.score || 0) < 50) return false;
+  if (f.source !== "all" && normalizeText(item.source_name) !== normalizeText(f.source)) return false;
+
+  return true;
+}
+
+function sortListings(items) {
+  const sorted = [...items];
+
+  switch (state.filters.sort) {
+    case "highest":
+      sorted.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+      break;
+    case "lowest-bid":
+      sorted.sort((a, b) => Number(a.bid || 0) - Number(b.bid || 0));
+      break;
+    case "ending-soon":
+      sorted.sort((a, b) => {
+        const aTime = a.end_time ? new Date(a.end_time).getTime() : Infinity;
+        const bTime = b.end_time ? new Date(b.end_time).getTime() : Infinity;
+        return aTime - bTime;
+      });
+      break;
+    case "newest":
+      sorted.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+      break;
+  }
+
+  return sorted;
+}
+
+function applyFilters() {
+  state.filteredListings = sortListings(state.listings.filter(matchesFilters));
+}
+
+function money(value) {
+  const number = Number(value || 0);
+  return `$${number.toLocaleString()}`;
+}
+
+function safe(text) {
+  return text == null ? "—" : String(text);
+}
+
+function isWatched(id) {
+  return state.watchlist.some(item => String(item.id) === String(id));
+}
+
+function toggleWatch(item) {
+  const exists = state.watchlist.some(x => String(x.id) === String(item.id));
+
+  if (exists) {
+    state.watchlist = state.watchlist.filter(x => String(x.id) !== String(item.id));
+  } else {
+    state.watchlist = [item, ...state.watchlist];
+  }
+
+  saveWatchlist();
+  return !exists;
+}
+
+function createAlertFromItem(item) {
+  const alert = {
+    id: `alert-${item.id}`,
+    listingId: item.id,
+    title: `${item.make || ""} ${item.model || ""}`.trim() || item.title,
+    keyword: item.make || item.model || item.title || "Listing",
+    source: item.source_name || "unknown",
+    bidType: Number(item.bid) === 0 ? "Zero Bid Only" : "Any Bid",
+    score: item.score || 0,
+    item
+  };
+
+  const exists = state.alerts.some(x => String(x.id) === String(alert.id));
+  if (!exists) {
+    state.alerts.unshift(alert);
+    saveAlerts();
+  }
+
+  return !exists;
+}
+
+function getQueryParam(name) {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+}
+
+async function fetchListings() {
+  const res = await fetch(`${API_BASE}/listings`);
+  const data = await res.json();
+  return data.items || [];
+}
+
+function showToast(message) {
+  let toast = document.getElementById("vs-toast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "vs-toast";
+    toast.style.position = "fixed";
+    toast.style.left = "50%";
+    toast.style.bottom = "110px";
+    toast.style.transform = "translateX(-50%)";
+    toast.style.padding = "14px 18px";
+    toast.style.borderRadius = "999px";
+    toast.style.background = "rgba(10,12,18,.92)";
+    toast.style.color = "#fff";
+    toast.style.fontWeight = "700";
+    toast.style.zIndex = "9999";
+    toast.style.boxShadow = "0 10px 30px rgba(0,0,0,.35)";
+    toast.style.border = "1px solid rgba(255,255,255,.08)";
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.style.opacity = "1";
+
+  clearTimeout(window.__vsToastTimer);
+  window.__vsToastTimer = setTimeout(() => {
+    toast.style.opacity = "0";
+  }, 1800);
+}
+
+function renderListingCard(item) {
+  const watched = isWatched(item.id);
+
+  return `
+    <article class="listing-card">
+      <div class="listing-media">
+        <img src="${safe(item.image_url || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80")}" alt="${safe(item.title)}">
+        <div class="listing-badges">
+          <span class="badge">${safe(item.source_name)}</span>
+          ${isZeroBid(item) ? '<span class="badge success">Zero Bid</span>' : ""}
+          ${isEndingSoon(item) ? '<span class="badge urgent">Ending Soon</span>' : ""}
+          <span class="badge score">Score ${safe(item.score || 0)}</span>
+        </div>
+      </div>
+
+      <div class="listing-body">
+        <div class="listing-head">
+          <div>
+            <h3>${safe(item.title)}</h3>
+            <p>${safe(item.location)}</p>
+          </div>
+          <div class="listing-price">
+            <span>Current Bid</span>
+            <strong>${money(item.bid)}</strong>
+          </div>
+        </div>
+
+        <div class="listing-grid">
+          <div class="data-pill"><span>Year</span><strong>${safe(item.year)}</strong></div>
+          <div class="data-pill"><span>Make / Model</span><strong>${safe(item.make)} ${safe(item.model)}</strong></div>
+          <div class="data-pill"><span>Location</span><strong>${safe(item.location)}</strong></div>
+          <div class="data-pill"><span>End Time</span><strong>${item.end_time ? new Date(item.end_time).toLocaleString() : "—"}</strong></div>
+          <div class="data-pill"><span>Title</span><strong>${safe(item.title_status)}</strong></div>
+          <div class="data-pill"><span>Damage</span><strong>${safe(item.damage)}</strong></div>
+          <div class="data-pill"><span>VIN</span><strong>${safe(item.vin)}</strong></div>
+          <div class="data-pill"><span>Image Count</span><strong>${safe(item.image_count || 0)}</strong></div>
+        </div>
+
+        <div class="card-actions listing-actions-3">
+          <a class="btn btn-primary" href="${safe(item.url || "#")}" target="_blank">Open Auction</a>
+          <button class="btn btn-secondary js-watch" data-id="${item.id}">${watched ? "Watching" : "Watch"}</button>
+          <button class="btn btn-secondary js-alert" data-id="${item.id}">Alert</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function attachCardEvents(items) {
+  document.querySelectorAll(".js-watch").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.id;
+      const item = items.find(x => String(x.id) === String(id));
+      if (!item) return;
+
+      const nowWatching = toggleWatch(item);
+      button.textContent = nowWatching ? "Watching" : "Watch";
+      showToast(nowWatching ? "Added to watchlist" : "Removed from watchlist");
+    });
+  });
+
+  document.querySelectorAll(".js-alert").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.id;
+      const item = items.find(x => String(x.id) === String(id));
+      if (!item) return;
+
+      const created = createAlertFromItem(item);
+      button.textContent = created ? "Alert Saved" : "Alert Exists";
+      showToast(created ? "Alert saved" : "Alert already exists");
+    });
+  });
+}
+
+function bindFilters() {
+  const searchInput = document.getElementById("searchInput");
+  const bidTypeFilter = document.getElementById("bidTypeFilter");
+  const scoreFilter = document.getElementById("scoreFilter");
+  const sourceFilter = document.getElementById("sourceFilter");
+  const sortFilter = document.getElementById("sortFilter");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      state.filters.search = e.target.value;
+      applyFilters();
+      renderHunterResults();
+    });
+  }
+
+  if (bidTypeFilter) {
+    bidTypeFilter.addEventListener("change", (e) => {
+      state.filters.bidType = e.target.value;
+      applyFilters();
+      renderHunterResults();
+    });
+  }
+
+  if (scoreFilter) {
+    scoreFilter.addEventListener("change", (e) => {
+      state.filters.score = e.target.value;
+      applyFilters();
+      renderHunterResults();
+    });
+  }
+
+  if (sourceFilter) {
+    sourceFilter.addEventListener("change", (e) => {
+      state.filters.source = e.target.value;
+      applyFilters();
+      renderHunterResults();
+    });
+  }
+
+  if (sortFilter) {
+    sortFilter.addEventListener("change", (e) => {
+      state.filters.sort = e.target.value;
+      applyFilters();
+      renderHunterResults();
+    });
+  }
+}
+
+function renderDashboard() {
+  const totalEl = document.getElementById("stat-total");
+  const zeroEl = document.getElementById("stat-zero");
+  const highEl = document.getElementById("stat-high");
+  const soonEl = document.getElementById("stat-soon");
+  const pulseEl = document.getElementById("pulse-count");
+  const feedEl = document.getElementById("live-feed");
+
+  const zero = state.listings.filter(isZeroBid);
+  const high = state.listings.filter(x => Number(x.score || 0) >= 70);
+  const soon = state.listings.filter(isEndingSoon);
+
+  if (totalEl) totalEl.textContent = state.listings.length;
+  if (zeroEl) zeroEl.textContent = zero.length;
+  if (highEl) highEl.textContent = high.length;
+  if (soonEl) soonEl.textContent = soon.length;
+  if (pulseEl) pulseEl.textContent = state.listings.length;
+
+  if (feedEl) {
+    feedEl.innerHTML = state.listings.length
+      ? state.listings.map(renderListingCard).join("")
+      : `<div class="empty-state">No listings available.</div>`;
+    attachCardEvents(state.listings);
+  }
+}
+
+function renderHunterResults() {
+  const countEl = document.getElementById("hunter-count");
+  const resultsEl = document.getElementById("hunter-results");
+
+  if (countEl) countEl.textContent = state.filteredListings.length;
+
+  if (resultsEl) {
+    resultsEl.innerHTML = state.filteredListings.length
+      ? state.filteredListings.map(renderListingCard).join("")
+      : `<div class="empty-state">No matching listings found.</div>`;
+    attachCardEvents(state.filteredListings);
+  }
+}
+
+function renderDetail() {
+  const id = getQueryParam("id");
+  const item = state.listings.find(x => String(x.id) === String(id));
+  const container = document.getElementById("detail-view");
+
+  if (!container) return;
+
+  if (!item) {
+    container.innerHTML = `<div class="empty-state">Listing not found.</div>`;
+    return;
+  }
+
+  const watched = isWatched(item.id);
+
+  container.innerHTML = `
+    <article class="listing-card detail-card">
+      <div class="listing-media">
+        <img src="${safe(item.image_url || "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=80")}" alt="${safe(item.title)}">
+        <div class="listing-badges">
+          <span class="badge">${safe(item.source_name)}</span>
+          ${isZeroBid(item) ? '<span class="badge success">Zero Bid</span>' : ""}
+          ${isEndingSoon(item) ? '<span class="badge urgent">Ending Soon</span>' : ""}
+          <span class="badge score">Score ${safe(item.score || 0)}</span>
+        </div>
+      </div>
+
+      <div class="listing-body">
+        <div class="listing-head">
+          <div>
+            <h3>${safe(item.title)}</h3>
+            <p>${safe(item.location)}</p>
+          </div>
+          <div class="listing-price">
+            <span>Current Bid</span>
+            <strong>${money(item.bid)}</strong>
+          </div>
+        </div>
+
+        <div class="listing-grid">
+          <div class="data-pill"><span>Year</span><strong>${safe(item.year)}</strong></div>
+          <div class="data-pill"><span>Make</span><strong>${safe(item.make)}</strong></div>
+          <div class="data-pill"><span>Model</span><strong>${safe(item.model)}</strong></div>
+          <div class="data-pill"><span>Damage</span><strong>${safe(item.damage)}</strong></div>
+          <div class="data-pill"><span>Title</span><strong>${safe(item.title_status)}</strong></div>
+          <div class="data-pill"><span>VIN</span><strong>${safe(item.vin)}</strong></div>
+          <div class="data-pill"><span>Location</span><strong>${safe(item.location)}</strong></div>
+          <div class="data-pill"><span>End Time</span><strong>${item.end_time ? new Date(item.end_time).toLocaleString() : "—"}</strong></div>
+        </div>
+
+        <div class="card-actions listing-actions-3">
+          <a class="btn btn-primary" href="${safe(item.url || "#")}" target="_blank">Open Auction Source</a>
+          <button class="btn btn-secondary js-watch" data-id="${item.id}">${watched ? "Watching" : "Watch"}</button>
+          <button class="btn btn-secondary js-alert" data-id="${item.id}">Alert</button>
+        </div>
+
+        <div class="card-actions" style="margin-top:12px">
+          <a class="btn btn-secondary" href="hunter.html">Back to Hunter</a>
+        </div>
+      </div>
+    </article>
+  `;
+
+  attachCardEvents([item]);
+}
+
+function renderAlerts() {
+  const countEl = document.getElementById("alerts-count");
+  const listEl = document.getElementById("alerts-list");
+
+  if (countEl) countEl.textContent = state.alerts.length;
+  if (!listEl) return;
+
+  if (!state.alerts.length) {
+    listEl.innerHTML = `<div class="empty-state">No alerts yet. Tap Alert on a listing card to create one.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = state.alerts.map(alert => `
+    <article class="glass-card alert-item">
+      <div class="alert-row">
+        <div>
+          <h3>${safe(alert.title || "Saved Alert")}</h3>
+          <p>${safe(alert.keyword)}</p>
+          <p>Source: ${safe(alert.source)}</p>
+          <p>Bid: ${safe(alert.bidType)}</p>
+          <p>Score: ${safe(alert.score)}</p>
+        </div>
+        <span class="badge success">Live</span>
+      </div>
+    </article>
+  `).join("");
+}
+
+function renderWatchlist() {
+  const countEl = document.getElementById("watch-count");
+  const listEl = document.getElementById("watch-list");
+
+  if (countEl) countEl.textContent = state.watchlist.length;
+  if (!listEl) return;
+
+  if (!state.watchlist.length) {
+    listEl.innerHTML = `<div class="empty-state">No saved listings yet. Tap Watch on a listing card.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = state.watchlist.map(renderListingCard).join("");
+  attachCardEvents(state.watchlist);
+}
+
+async function initApp() {
+  state.listings = await fetchListings();
+  state.watchlist = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || "[]");
+  state.alerts = JSON.parse(localStorage.getItem(ALERTS_KEY) || "[]");
+  applyFilters();
+
+  const page = document.body.dataset.page;
+
+  if (page === "dashboard") renderDashboard();
+  if (page === "hunter") {
+    bindFilters();
+    const sourceFilter = document.getElementById("sourceFilter");
+    if (sourceFilter) {
+      [...new Set(state.listings.map(x => x.source_name).filter(Boolean))].forEach(source => {
+        const opt = document.createElement("option");
+        opt.value = source;
+        opt.textContent = source;
+        sourceFilter.appendChild(opt);
+      });
+    }
+    renderHunterResults();
+  }
+  if (page === "detail") renderDetail();
+  if (page === "alerts") renderAlerts();
+  if (page === "watchlist") renderWatchlist();
+}
+
+document.addEventListener("DOMContentLoaded", initApp);

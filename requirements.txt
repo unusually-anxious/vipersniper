@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+httpx[http2]
+aiohttp
+redis
+pydantic
+python-dotenv
+orjson

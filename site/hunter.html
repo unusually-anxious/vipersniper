@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperSniper — Hunter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="hunter">
+  <div class="shell">
+    <main class="main mobile-page">
+      <div class="mobile-top">
+        <div class="mobile-brand">
+          <div class="brand-mark"></div>
+          <strong>ViperSniper</strong>
+        </div>
+        <div class="chip glow">Hunter</div>
+      </div>
+
+      <section class="hero hero-premium compact-hero">
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow-pill">Zero-Bid Hunter</div>
+            <h1>Search, filter, and prioritize live auction opportunities.</h1>
+            <p>Filter by bid state, score, source, and sort order to surface the best targets fast.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card filter-panel">
+        <h2>Filters</h2>
+        <div class="filter-grid">
+          <div>
+            <label for="searchInput">Search</label>
+            <input id="searchInput" type="text" placeholder="Search make, model, VIN, source, location">
+          </div>
+          <div>
+            <label for="bidTypeFilter">Bid Type</label>
+            <select id="bidTypeFilter">
+              <option value="all">All</option>
+              <option value="zero">Zero Bid</option>
+              <option value="nonzero">Has Bid</option>
+              <option value="ending">Ending Soon</option>
+            </select>
+          </div>
+          <div>
+            <label for="scoreFilter">Score</label>
+            <select id="scoreFilter">
+              <option value="all">All scores</option>
+              <option value="50plus">50+</option>
+              <option value="70plus">70+</option>
+            </select>
+          </div>
+          <div>
+            <label for="sourceFilter">Source</label>
+            <select id="sourceFilter">
+              <option value="all">All sources</option>
+            </select>
+          </div>
+          <div>
+            <label for="sortFilter">Sort</label>
+            <select id="sortFilter">
+              <option value="highest">Highest score</option>
+              <option value="lowest-bid">Lowest bid</option>
+              <option value="ending-soon">Ending soon</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card summary-row">
+        <div>Hunter Results <strong id="hunter-count">0</strong></div>
+      </section>
+
+      <section class="feed-section">
+        <div class="section-head">
+          <h2>Results Feed</h2>
+        </div>
+        <div id="hunter-results" class="listing-grid"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <a href="index.html">Dashboard</a>
+      <a href="hunter.html" class="active">Hunter</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="watchlist.html">Watchlist</a>
+      <a href="homepage.html">Site</a>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
