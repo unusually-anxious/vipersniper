@@ -4,10 +4,10 @@ from crawler.models.jobs import FetchJob
 
 SOURCES = [
     {
-        "source_name": "demo_api",
+        "source_name": "CopartSource(), IAAISource(), BidCarsSource(), SalvageBidSource()",
         "source_type": "api",
         "url": "http://127.0.0.1:9000/api/listings",
-        "parser_name": "demo_api_parser",
+        "parser_name": "CopartSource(), IAAISource(), BidCarsSource(), SalvageBidSource()_parser",
         "interval_seconds": 30,
     }
 ]

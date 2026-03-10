@@ -1,0 +1,6 @@
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:14] "GET /index.html HTTP/1.1" 304 -
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:14] "GET /js/dashboard.js HTTP/1.1" 304 -
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:24] "GET /hunter.html HTTP/1.1" 200 -
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:26] "GET /alerts.html HTTP/1.1" 304 -
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:26] "GET /js/api.js HTTP/1.1" 304 -
+::ffff:127.0.0.1 - - [09/Mar/2026 20:02:26] "GET /login.html HTTP/1.1" 304 -
